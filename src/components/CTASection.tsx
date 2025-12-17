@@ -1,17 +1,16 @@
-import { ArrowRight, Rocket } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Rocket } from "lucide-react";
 
 interface CTASectionProps {
-  onStartClick: () => void;
+  // Props removed
 }
 
-const CTASection = ({ onStartClick }: CTASectionProps) => {
+const CTASection = () => {
   return (
     <section className="py-24 px-4 relative overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent" />
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/10 rounded-full blur-3xl" />
-      
+
       <div className="container mx-auto max-w-3xl relative z-10 text-center">
         {/* Icon */}
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 mb-8 animate-float">
@@ -26,20 +25,11 @@ const CTASection = ({ onStartClick }: CTASectionProps) => {
 
         {/* Supporting Text */}
         <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto">
-          Don't leave your next opportunity to chance. Prepare with confidence 
+          Don't leave your next opportunity to chance. Prepare with confidence
           and walk into your interview ready to impress.
         </p>
 
-        {/* CTA Button */}
-        <Button 
-          variant="hero" 
-          size="xl" 
-          onClick={onStartClick}
-          className="group"
-        >
-          Launch Interview Simulator
-          <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-        </Button>
+        {/* CTA Button Removed */}
 
         {/* Trust Indicator */}
         <p className="text-sm text-muted-foreground mt-8">

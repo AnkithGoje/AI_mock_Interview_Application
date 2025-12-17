@@ -1,18 +1,24 @@
 import { useState } from "react";
-import { Briefcase, Layers, Plus, ChevronRight } from "lucide-react";
+import { Briefcase, Layers, Plus, ChevronRight, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const competencies = [
+  "Algorithms & Data Structures",
+  "Cloud Infrastructure (AWS/GCP)",
+  "Database Design (SQL/NoSQL)",
+  "DevOps & CI/CD",
+  "Distributed Systems",
+  "Machine Learning",
+  "Microservices",
+  "Neural Networks",
+  "Node.js & Backend Systems",
+  "Python",
+  "React & Frontend Architecture",
   "System Design",
-  "Algorithms",
-  "React",
-  "Node.js",
-  "Leadership",
-  "Conflict Resolution",
-  "Communication",
-  "Code Quality",
 ];
 
 interface InterviewSetupProps {
@@ -20,10 +26,13 @@ interface InterviewSetupProps {
 }
 
 const InterviewSetup = ({ id }: InterviewSetupProps) => {
+  const [userName, setUserName] = useState("");
   const [jobTitle, setJobTitle] = useState("Data Engineer");
   const [yearsExperience, setYearsExperience] = useState([1]);
   const [selectedCompetencies, setSelectedCompetencies] = useState<string[]>([]);
   const [customCompetency, setCustomCompetency] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   const toggleCompetency = (competency: string) => {
     setSelectedCompetencies((prev) =>
@@ -47,15 +56,57 @@ const InterviewSetup = ({ id }: InterviewSetupProps) => {
     }
   };
 
-  const isFormValid = jobTitle.trim().length > 0;
+  const isFormValid = userName.trim().length > 0 && jobTitle.trim().length > 0;
 
-  const handleStartInterview = () => {
-    if (isFormValid) {
-      console.log("Starting interview:", {
-        jobTitle,
-        yearsExperience: yearsExperience[0],
-        competencies: selectedCompetencies,
+  const handleStartInterview = async () => {
+    if (!isFormValid) return;
+
+    setIsSubmitting(true);
+
+    // Switch to JSON with text/plain to avoid CORS preflight issues
+    // This is the most robust way to send data to GAS from client-side
+    // Match keys exactly to what the Google Apps Script expects
+    const data = {
+      fullName: userName,
+      jobTitle: jobTitle,
+      yearsOfExperience: yearsExperience[0],
+      // Note: The Provided GAS script doesn't save competencies, only the 3 fields above + timestamp
+      competencies: selectedCompetencies,
+    };
+
+    try {
+      await fetch(
+        "https://script.google.com/macros/s/AKfycbyj_L3mC9JbpZnrLeiiieHy5Am_31NvQv72kUpVUg_t9m85SoD2o-yvRp4UTow_aAiRGA/exec",
+        {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain", // Crucial: avoids OPTIONS preflight
+          },
+          body: JSON.stringify(data),
+        }
+      );
+
+      toast.success("Profile saved successfully!");
+      console.log("Starting interview for:", data);
+
+      // Navigate to interview room with state
+      navigate("/interview", {
+        state: {
+          userName,
+          jobTitle,
+          yearsExperience: yearsExperience[0],
+          competencies: selectedCompetencies
+        }
       });
+
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      toast.error("Failed to save profile, but continuing...");
+      // Even if GAS fails, we might want to let them interview?
+      navigate("/interview", { state: { userName } });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -69,12 +120,36 @@ const InterviewSetup = ({ id }: InterviewSetupProps) => {
           </p>
         </div>
 
-        {/* Two Column Layout */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          {/* Left Column */}
-          <div className="space-y-6">
+        {/* Identity Section - Full Width */}
+        <div className="bg-card rounded-2xl p-6 border border-border shadow-sm mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <User className="w-5 h-5 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">Candidate Identity</h3>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Full Name</label>
+              <input
+                type="text"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Enter your name..."
+                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="space-y-6 mb-6">
+
+          {/* Top Row: Target Role & Experience Level */}
+          <div className="grid md:grid-cols-2 gap-6">
             {/* Target Role Card */}
-            <div className="bg-card rounded-2xl p-6 border border-border shadow-sm">
+            <div className="bg-card rounded-2xl p-6 border border-border shadow-sm h-full">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                   <Briefcase className="w-5 h-5 text-primary" />
@@ -95,7 +170,7 @@ const InterviewSetup = ({ id }: InterviewSetupProps) => {
             </div>
 
             {/* Experience Level Card */}
-            <div className="bg-card rounded-2xl p-6 border border-border shadow-sm">
+            <div className="bg-card rounded-2xl p-6 border border-border shadow-sm h-full">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                   <Layers className="w-5 h-5 text-primary" />
@@ -128,8 +203,8 @@ const InterviewSetup = ({ id }: InterviewSetupProps) => {
             </div>
           </div>
 
-          {/* Right Column - Core Competencies */}
-          <div className="bg-card rounded-2xl p-6 border border-border shadow-sm h-fit">
+          {/* Bottom Row: Core Competencies (Full Width) */}
+          <div className="bg-card rounded-2xl p-6 border border-border shadow-sm w-full">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                 <svg
@@ -197,11 +272,20 @@ const InterviewSetup = ({ id }: InterviewSetupProps) => {
         <div className="flex flex-col items-center">
           <Button
             onClick={handleStartInterview}
-            disabled={!isFormValid}
+            disabled={!isFormValid || isSubmitting}
             className="w-full max-w-md bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg font-semibold rounded-xl flex items-center justify-center gap-2 transition-all duration-200"
           >
-            Start Interview
-            <ChevronRight className="w-5 h-5" />
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                Start Interview
+                <ChevronRight className="w-5 h-5" />
+              </>
+            )}
           </Button>
           <p className="text-sm text-muted-foreground mt-3">
             By starting, you agree to the session recording policy.

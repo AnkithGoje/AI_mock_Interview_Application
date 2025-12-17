@@ -1,20 +1,19 @@
-import { ArrowRight, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Sparkles } from "lucide-react";
 
 interface HeroSectionProps {
-  onStartClick: () => void;
+  // Props removed
 }
 
-const HeroSection = ({ onStartClick }: HeroSectionProps) => {
+const HeroSection = () => {
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-card/50" />
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float" />
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/10 rounded-full blur-3xl animate-float" style={{ animationDelay: "1s" }} />
-      
+
       {/* Grid Pattern */}
-      <div 
+      <div
         className="absolute inset-0 opacity-[0.02]"
         style={{
           backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px),
@@ -39,22 +38,11 @@ const HeroSection = ({ onStartClick }: HeroSectionProps) => {
 
         {/* Supporting Text */}
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in opacity-0 text-balance" style={{ animationDelay: "0.4s" }}>
-          Practice with role-specific questions tailored to your experience level. 
+          Practice with role-specific questions tailored to your experience level.
           Build confidence before your next big interview.
         </p>
 
-        {/* CTA Button */}
-        <div className="animate-fade-in opacity-0" style={{ animationDelay: "0.6s" }}>
-          <Button 
-            variant="hero" 
-            size="xl" 
-            onClick={onStartClick}
-            className="group"
-          >
-            Start Mock Interview
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </Button>
-        </div>
+        {/* CTA Button Removed */}
 
         {/* Stats */}
         <div className="flex flex-wrap justify-center gap-8 md:gap-16 mt-16 animate-fade-in opacity-0" style={{ animationDelay: "0.8s" }}>
