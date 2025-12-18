@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-route
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import InterviewRoom from "./components/InterviewRoom";
+import ReportPage from "./components/ReportPage";
 
 const queryClient = new QueryClient();
 
@@ -16,7 +17,8 @@ const InterviewPage = () => {
     userName: string;
     jobTitle: string;
     yearsExperience: number;
-    competencies: string[]
+    competencies: string[];
+    interviewType: string;
   } | null;
 
   if (!state?.userName) {
@@ -29,6 +31,7 @@ const InterviewPage = () => {
       jobTitle={state.jobTitle}
       yearsExperience={state.yearsExperience}
       competencies={state.competencies}
+      interviewType={state.interviewType}
     />
   );
 };
@@ -42,6 +45,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/interview" element={<InterviewPage />} />
+          <Route path="/report" element={<ReportPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

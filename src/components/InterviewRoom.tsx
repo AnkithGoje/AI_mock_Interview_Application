@@ -52,13 +52,15 @@ interface InterviewRoomProps {
     jobTitle?: string;
     yearsExperience?: number;
     competencies?: string[];
+    interviewType?: string;
 }
 
 export default function InterviewRoom({
     userName,
     jobTitle = "Software Engineer",
     yearsExperience = 0,
-    competencies = []
+    competencies = [],
+    interviewType = "technical"
 }: InterviewRoomProps) {
     const [token, setToken] = useState("");
     const [error, setError] = useState("");
@@ -67,14 +69,14 @@ export default function InterviewRoom({
     useEffect(() => {
         const fetchToken = async () => {
             try {
-                // Encode complex data as JSON strings or individual params?
-                // Using individual params for simplicity but encoding competencies as comma-separated
+                // Encode complex data as JSON strings or individual params
                 const params = new URLSearchParams({
                     identity: userName,
                     name: userName,
                     jobTitle: jobTitle,
                     yearsExperience: yearsExperience.toString(),
-                    competencies: JSON.stringify(competencies)
+                    competencies: JSON.stringify(competencies),
+                    interviewType: interviewType
                 });
 
                 const response = await fetch(
@@ -132,16 +134,31 @@ export default function InterviewRoom({
             data-lk-theme="default"
             className="min-h-screen flex flex-col bg-slate-50"
         >
-            <InterviewSession userName={userName} liveKitUrl={liveKitUrl} token={token} competencies={competencies} />
+            <InterviewSession
+                userName={userName}
+                jobTitle={jobTitle}
+                yearsExperience={yearsExperience}
+                competencies={competencies}
+                interviewType={interviewType}
+            />
         </LiveKitRoom>
     );
 }
 
-function InterviewSession({ userName, liveKitUrl, token, competencies }: { userName: string, liveKitUrl: string, token: string, competencies: string[] }) {
+interface InterviewSessionProps {
+    userName: string;
+    jobTitle: string;
+    yearsExperience: number;
+    competencies: string[];
+    interviewType: string;
+}
+
+function InterviewSession({ userName, jobTitle, yearsExperience, competencies, interviewType }: InterviewSessionProps) {
     const navigate = useNavigate();
     const room = useRoomContext();
-    const [evaluation, setEvaluation] = useState<any>(null);
-    const [isResultOpen, setIsResultOpen] = useState(false);
+    // Removed modal state as we navigate to new page now
+    // const [evaluation, setEvaluation] = useState<any>(null);
+    // const [isResultOpen, setIsResultOpen] = useState(false);
     const { localParticipant } = room;
 
     const tracks = useTracks(
@@ -152,18 +169,88 @@ function InterviewSession({ userName, liveKitUrl, token, competencies }: { userN
     );
     const localTrack = tracks.find(tr => tr.participant.isLocal);
 
+    // Failsafe: Explicitly set metadata on the participant after connection
+    useEffect(() => {
+        if (!room?.localParticipant) return;
+
+        const metadata = JSON.stringify({
+            jobTitle,
+            yearsExperience: yearsExperience.toString(),
+            competencies,
+            interviewType
+        });
+
+        // Publish metadata to the room so the agent can read it guaranteed
+        // This acts as a secondary channel in case token metadata isn't ready
+        room.localParticipant.setMetadata(metadata);
+        console.log("Published metadata to room:", metadata);
+
+    }, [room, jobTitle, yearsExperience, competencies, interviewType]);
+
     useEffect(() => {
         if (!room) return;
 
-        const handleData = (payload: Uint8Array, participant: any) => {
+        const handleData = async (payload: Uint8Array, participant: any, kind: any, topic: any) => {
+            console.log("Data Received Event:", { participant: participant?.identity, topic, kind }); // Debug log
             try {
                 const strData = new TextDecoder().decode(payload);
+                console.log("Decoded Data:", strData); // Debug log
                 const jsonData = JSON.parse(strData);
 
                 if (jsonData.type === "BIO_EVALUATION") {
-                    console.log("Received Evaluation:", jsonData);
-                    setEvaluation(jsonData);
-                    setIsResultOpen(true);
+                    console.log("Processing Evaluation:", jsonData);
+
+                    // --- PERSISTENCE LOGIC START ---
+                    const saveToSheet = async (retryCount = 0) => {
+                        try {
+                            const scriptUrl = "https://script.google.com/macros/s/AKfycbyj_L3mC9JbpZnrLeiiieHy5Am_31NvQv72kUpVUg_t9m85SoD2o-yvRp4UTow_aAiRGA/exec";
+
+                            const persistencePayload = {
+                                userName,
+                                jobTitle,
+                                yearsExperience,
+                                interviewType,
+                                score: jsonData.score,
+                                decision: jsonData.decision,
+                                strengths: jsonData.strengths.join(", "),
+                                improvements: jsonData.improvements.join(", "),
+                                date: new Date().toISOString()
+                            };
+
+                            console.log(`Saving to Google Sheet (Attempt ${retryCount + 1}):`, persistencePayload);
+
+                            await fetch(scriptUrl, {
+                                method: "POST",
+                                mode: "no-cors",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify(persistencePayload),
+                            });
+                            console.log("Data sent to Google Sheet successfully");
+                        } catch (saveError) {
+                            console.error(`Failed to save data (Attempt ${retryCount + 1}):`, saveError);
+                            if (retryCount < 1) { // Retry once
+                                console.log("Retrying save...");
+                                setTimeout(() => saveToSheet(retryCount + 1), 1000);
+                            }
+                        }
+                    };
+
+                    saveToSheet(); // Fire and forget, but with retry
+                    // --- PERSISTENCE LOGIC END ---
+
+                    // --- NEW NAVIGATION LOGIC START ---
+                    console.log("Evaluation received, disconnecting and navigating to report...");
+                    room.disconnect();
+                    navigate("/report", {
+                        state: {
+                            evaluation: jsonData,
+                            candidateName: userName,
+                            jobTitle: jobTitle
+                        }
+                    });
+                    // --- NEW NAVIGATION LOGIC END ---
                 }
             } catch (e) {
                 console.error("Failed to parse data packet:", e);
@@ -174,7 +261,7 @@ function InterviewSession({ userName, liveKitUrl, token, competencies }: { userN
         return () => {
             room.off(RoomEvent.DataReceived, handleData);
         };
-    }, [room]);
+    }, [room, userName, jobTitle, yearsExperience, interviewType]);
 
     return (
         <div className="relative h-screen w-full bg-slate-100 flex flex-col p-6 overflow-hidden font-sans">
@@ -289,14 +376,7 @@ function InterviewSession({ userName, liveKitUrl, token, competencies }: { userN
                     <MicButton />
                     <CameraButton />
                     <div className="h-8 w-px bg-slate-200" />
-                    <Button
-                        variant="destructive"
-                        className="h-12 px-6 rounded-full shadow-lg bg-red-500 hover:bg-red-600 gap-2 font-medium"
-                        onClick={() => navigate("/")}
-                    >
-                        <PhoneOff className="w-5 h-5" />
-                        <span>Leave</span>
-                    </Button>
+                    <LeaveButton room={room} navigate={navigate} />
                 </div>
             </div>
 
@@ -305,89 +385,105 @@ function InterviewSession({ userName, liveKitUrl, token, competencies }: { userN
             <StartAudio label="Click to allow audio playback" />
             <ConnectionStateToast />
 
-            {/* Evaluation Results Modal */}
-            <Dialog open={isResultOpen} onOpenChange={setIsResultOpen}>
-                <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-3xl max-h-[90vh]">
-                    <DialogHeader>
-                        <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-slate-900">
-                            <Trophy className="w-6 h-6 text-yellow-500" />
-                            Interview Evaluation
-                        </DialogTitle>
-                        <DialogDescription className="text-slate-500">
-                            Here is the detailed feedback from your AI Interviewer.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {evaluation && (
-                        <ScrollArea className="flex-1 pr-4">
-                            <div className="space-y-6 py-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Card className="bg-slate-50 border-slate-200">
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-sm font-medium text-slate-500">Overall Score</CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="text-4xl font-bold text-slate-900">{evaluation.score}/10</div>
-                                        </CardContent>
-                                    </Card>
-                                    <Card className={evaluation.decision === 'Hire' || evaluation.decision === 'Strong Hire' ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}>
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-sm font-medium text-slate-500">Decision</CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className={evaluation.decision === 'Hire' || evaluation.decision === 'Strong Hire' ? 'text-4xl font-bold text-emerald-600' : 'text-4xl font-bold text-red-600'}>
-                                                {evaluation.decision}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-slate-900">
-                                        <Target className="w-5 h-5 text-emerald-500" /> Key Strengths
-                                    </h3>
-                                    <ul className="space-y-2">
-                                        {evaluation.strengths.map((str: string, i: number) => (
-                                            <li key={i} className="flex items-start gap-2 bg-emerald-50 p-3 rounded-lg border border-emerald-100">
-                                                <span className="text-emerald-500 mt-0.5">•</span>
-                                                <span className="text-slate-700 text-sm">{str}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-slate-900">
-                                        <AlertTriangle className="w-5 h-5 text-amber-500" /> Areas for Improvement
-                                    </h3>
-                                    <ul className="space-y-2">
-                                        {evaluation.improvements.map((imp: string, i: number) => (
-                                            <li key={i} className="flex items-start gap-2 bg-amber-50 p-3 rounded-lg border border-amber-100">
-                                                <span className="text-amber-500 mt-0.5">•</span>
-                                                <span className="text-slate-700 text-sm">{imp}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-slate-900">
-                                        <ListChecks className="w-5 h-5 text-blue-500" /> Recommended Preparation
-                                    </h3>
-                                    <ul className="space-y-2">
-                                        {evaluation.preparation_steps.map((step: string, i: number) => (
-                                            <li key={i} className="flex items-start gap-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                                <span className="text-blue-500 mt-0.5">•</span>
-                                                <span className="text-slate-700 text-sm">{step}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        </ScrollArea>
-                    )}
-                    <DialogFooter>
-                        <Button onClick={() => { setIsResultOpen(false); navigate("/"); }} variant="secondary">Close & Return Home</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {/* DEV TOOL: Simulate Report Button (Bottom Left) */}
+            <div className="absolute bottom-4 left-4 z-50 opacity-50 hover:opacity-100">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs bg-black/10 border-black/10 hover:bg-white"
+                    onClick={() => {
+                        console.log("Simulating report...");
+                        room.disconnect();
+                        navigate("/report", {
+                            state: {
+                                candidateName: userName,
+                                jobTitle: jobTitle,
+                                evaluation: {
+                                    score: 8,
+                                    decision: "Strong Hire",
+                                    strengths: ["Great communication", "Good React knowledge"],
+                                    improvements: ["Could be faster", "More testing needed"],
+                                    preparation_steps: ["Practice system design", "Review hooks"]
+                                }
+                            }
+                        });
+                    }}
+                >
+                    🔧 Test Report
+                </Button>
+            </div>
+
+            {/* Note: Modal Dialog removed as we now navigate to /report Page */}
         </div>
+    );
+}
+
+// Extracted Leave Button to handle state clearly
+function LeaveButton({ room, navigate }: { room: any, navigate: any }) {
+    const [isEnding, setIsEnding] = useState(false);
+
+    const handleHangup = async () => {
+        // 1. Prevent double-clicks
+        if (isEnding) return;
+        setIsEnding(true);
+
+        console.log("Initiating hangup sequence...");
+
+        // 2. Immediate Safety Check: If not connected or no participant, just go home
+        if (!room || !room.localParticipant) {
+            console.warn("No active participant/room found. Navigating immediately.");
+            navigate("/");
+            return;
+        }
+
+        try {
+            // 3. Send Signal to Backend (Request Report)
+            // We use a try/catch here specifically for the signal
+            console.log("Sending 'generate_report' signal to backend...");
+            const encoder = new TextEncoder();
+            const data = encoder.encode("generate_report");
+            await room.localParticipant.publishData(data, { reliable: true });
+
+            // 4. Set Safety Timeout (EXTENDED to 5 mins) for Llama-70b to finish
+            // The actual navigation happens when data is received in the parent component.
+            setTimeout(() => {
+                console.warn("Report generation is taking longer than usual (5 mins).");
+                // We do NOT force redirect here anymore as per user request to avoid the generic timeout screen.
+                // The user can choose to leave manually if they wish.
+            }, 300000);
+
+        } catch (error) {
+            // 5. Fallback for Signal Failure
+            console.error("Failed to send 'generate_report' signal:", error);
+            console.warn("Forcing disconnection and navigation due to signal error.");
+
+            // Even if signalling fails, we disconnect and move on to the report page (empty state)
+            if (room.state === "connected") {
+                room.disconnect();
+            }
+            navigate("/report", { state: { error: "SignalFailed" } });
+        }
+    };
+
+    return (
+        <Button
+            variant="destructive"
+            disabled={isEnding}
+            className="h-12 px-6 rounded-full shadow-lg bg-red-500 hover:bg-red-600 gap-2 font-medium"
+            onClick={handleHangup}
+        >
+            {isEnding ? (
+                <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Finalizing...</span>
+                </>
+            ) : (
+                <>
+                    <PhoneOff className="w-5 h-5" />
+                    <span>End Interview</span>
+                </>
+            )}
+        </Button>
     );
 }
 

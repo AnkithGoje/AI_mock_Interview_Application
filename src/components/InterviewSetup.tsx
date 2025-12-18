@@ -31,6 +31,7 @@ const InterviewSetup = ({ id }: InterviewSetupProps) => {
   const [yearsExperience, setYearsExperience] = useState([1]);
   const [selectedCompetencies, setSelectedCompetencies] = useState<string[]>([]);
   const [customCompetency, setCustomCompetency] = useState("");
+  const [interviewType, setInterviewType] = useState("technical");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
@@ -72,6 +73,7 @@ const InterviewSetup = ({ id }: InterviewSetupProps) => {
       yearsOfExperience: yearsExperience[0],
       // Note: The Provided GAS script doesn't save competencies, only the 3 fields above + timestamp
       competencies: selectedCompetencies,
+      interviewType: interviewType,
     };
 
     try {
@@ -96,7 +98,8 @@ const InterviewSetup = ({ id }: InterviewSetupProps) => {
           userName,
           jobTitle,
           yearsExperience: yearsExperience[0],
-          competencies: selectedCompetencies
+          competencies: selectedCompetencies,
+          interviewType
         }
       });
 
@@ -200,6 +203,42 @@ const InterviewSetup = ({ id }: InterviewSetupProps) => {
                   <span>Principal (15)</span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Interview Type Selection */}
+          <div className="bg-card rounded-2xl p-6 border border-border shadow-sm mb-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">Interview Mode</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { id: "technical", label: "Technical Round", desc: "Deep dive into coding & architecture" },
+                { id: "hr", label: "HR Screening", desc: "Culture fit, salary & logistics" },
+                { id: "behavioral", label: "Behavioral", desc: "STAR method & soft skills" }
+              ].map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => setInterviewType(type.id)}
+                  className={cn(
+                    "flex flex-col items-start p-4 rounded-xl border transition-all duration-200 text-left",
+                    interviewType === type.id
+                      ? "bg-primary/5 border-primary ring-1 ring-primary"
+                      : "bg-background border-border hover:border-primary/50"
+                  )}
+                >
+                  <span className={cn("font-semibold mb-1", interviewType === type.id ? "text-primary" : "text-foreground")}>
+                    {type.label}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {type.desc}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 

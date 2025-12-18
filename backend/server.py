@@ -18,7 +18,10 @@ def get_token():
     participant_name = request.args.get('name')
     job_title = request.args.get('jobTitle', 'Software Engineer')
     years_experience = request.args.get('yearsExperience', '0')
+    interview_type = request.args.get('interviewType', 'technical')
     competencies = request.args.get('competencies', '[]')
+    
+    print(f"DEBUG: Received token request - Identity: {participant_identity}, Type: {interview_type}")
 
     if not participant_identity or not participant_name:
         return jsonify({"error": "Missing identity or name"}), 400
@@ -27,7 +30,8 @@ def get_token():
     metadata = json.dumps({
         "jobTitle": job_title,
         "yearsExperience": years_experience,
-        "competencies": json.loads(competencies) if competencies else []
+        "competencies": json.loads(competencies) if competencies else [],
+        "interviewType": interview_type
     })
 
     # Create a LiveKit Access Token
