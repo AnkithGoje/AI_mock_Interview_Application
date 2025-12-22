@@ -37,13 +37,13 @@ async def grade_interaction(question: str, answer: str):
         grader_llm = groq.LLM(model="llama-3.3-70b-versatile")
         
         system_prompt = """
-        You are a Real-Time Interview Grader. Evaluate the Candidate's answer to the Interviewer's question.
+        You are a supportive Mentor and Interview Coach. Evaluate the Candidate's answer to the Interviewer's question.
         
         Output JSON only:
         {
-            "status": "PASS" | "FAIL" | "NEUTRAL",
+            "status": "Good" | "Needs Improvement" | "Satisfactory",
             "score": (0-10),
-            "feedback": "1-sentence constructive feedback."
+            "feedback": "Constructive feedback focusing on learning. Use phrases like 'This was good, but...', 'You could improve by...'. Do not be harsh."
         }
         """
         
@@ -233,38 +233,81 @@ async def generate_evaluation(ctx: agents.JobContext, chat_history: list[agents.
 
     # 3. Construct 70B Grading Prompt
     system_prompt = f"""
-    You are an expert Interview Grader. You are grading a {job_title} candidate.
-    
-    {shadow_summary}
-    
-    TRANSCRIPT SUMMARY:
-    {transcript[:2000]}... (truncated for efficiency)
-    
-    TASK:
-    Generate the FINAL JSON Report based heavily on the Per-Question Analysis above.
-    
-    GRADING RULES:
-    1. Be GENUINE and HONEST. Do not inflate scores.
-    2. If the user does not answer questions, provides very short responses ("I don't know"), or is off-topic, assign LOW SCORES (0-3).
-    3. If the transcript is empty or contains only greetings, assign 0 for all scores and "No Hire".
-    4. 'technical_score': Evaluate purely on technical accuracy and depth. Non-answers = 0.
-    5. 'problem_solving_score': Evaluate analytical approach. No attempt = 0.
-    
-    Return valid JSON:
+You are a Senior Technical Mentor and Hiring Manager evaluating a {job_title} candidate.
+
+Evaluate the candidate like a real human interviewer — not a robotic grader.
+Be empathetic toward nervousness, partial answers, and minor speech-to-text errors.
+If the core idea is correct but wording is imperfect, give the candidate the benefit of the doubt.
+
+You are provided with a SHADOW SUMMARY generated during the interview.
+This Shadow Summary is the PRIMARY SOURCE OF TRUTH for grading.
+Do NOT invent new questions, scores, or feedback beyond what is present in the Shadow Summary.
+
+────────────────────────────
+SHADOW SUMMARY (Authoritative):
+{shadow_summary}
+
+TRANSCRIPT SUMMARY (for context only, may contain STT noise):
+{transcript[:2000]}... (truncated)
+────────────────────────────
+
+TASK:
+Generate the FINAL EVALUATION JSON REPORT.
+
+Focus on:
+• Conceptual understanding over memorization  
+• Learning potential and reasoning ability  
+• Practical problem-solving mindset  
+
+If answers are incomplete or missing:
+• Do NOT penalize harshly
+• Clearly explain what the candidate should study or improve next time
+
+────────────────────────────
+GRADING INSTRUCTIONS:
+
+1. Use ONLY the questions, scores, and observations from the Shadow Summary
+2. Populate "question_breakdown" strictly from Shadow Grades
+3. Do NOT add or remove questions
+4. Normalize scores to a 0–10 scale if needed
+5. Final "score" = rounded average of question scores
+6. Decision logic:
+   • Strong Hire → score ≥ 8 AND strong fundamentals
+   • Hire → score 6–7.9 with growth potential
+   • No Hire → score < 6 or major gaps
+
+SCORING DIMENSIONS:
+• technical_score → correctness, depth, fundamentals
+• problem_solving_score → reasoning, approach, adaptability
+
+Tone:
+• Constructive
+• Encouraging
+• Actionable
+• Honest but supportive
+
+────────────────────────────
+OUTPUT FORMAT:
+Return ONLY valid JSON.
+No explanations, markdown, or extra text outside JSON.
+
+{{
+  "score": (integer 0–10),
+  "technical_score": (integer 0–10),
+  "problem_solving_score": (integer 0–10),
+  "decision": "Strong Hire" | "Hire" | "No Hire",
+  "strengths": ["exactly 3 concise strengths"],
+  "improvements": ["exactly 3 actionable improvements"],
+  "preparation_steps": ["clear next step", "clear next step"],
+  "question_breakdown": [
     {{
-        "score": (integer 0-10, average of question scores),
-        "technical_score": (integer 0-10, specific to technical accuracy),
-        "problem_solving_score": (integer 0-10, specific to analytical thinking),
-        "decision": ("Hire" | "No Hire" | "Strong Hire"),
-        "strengths": ["list", "of", "3", "strengths"],
-        "improvements": ["list", "of", "3", "improvements"],
-        "preparation_steps": ["step1", "step2"],
-        "question_breakdown": [
-            {{ "question": "...", "status": "PASS/FAIL", "score": N, "feedback": "..." }}
-        ]
+      "question": "...",
+      "status": "Good" | "Needs Improvement",
+      "score": (integer),
+      "feedback": "brief, constructive feedback"
     }}
-    
-    IMPORTANT: The "question_breakdown" array MUST be populated from the Shadow Grades provided.
+  ]
+}}
     """
 
     print("Sending final compilation request to Llama-70B...")
@@ -368,9 +411,10 @@ INTERVIEW FLOW
 1. **Greeting**: Welcome the candidate. Wait for their response.
 2. **Introduction**: Ask them to introduce themselves.
 3. **Project Deep Dive**: Ask: "Go through a project on which you have worked recently?".
-4. **Technical Loop**: Ask 3-4 questions based on their project or competencies.
-5. **Behavioral**: Ask 1-2 culture-fit questions.
-6. **Closing**: When the user is done, say a polite goodbye and stop asking questions.
+4. **Technical Loop**: Ask 2-3 questions based on their project or competencies.
+5. **Technical Concepts**: Ask 3-4 questions based the role they are applying for.
+6. **Behavioral**: Ask 1-2 culture-fit questions.
+7. **Closing**: When the user is done, say a polite goodbye and stop asking questions.
 """,
             "hr": f"""
 You are an AI-powered HR Interviewer.

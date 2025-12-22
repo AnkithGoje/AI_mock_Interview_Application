@@ -10,12 +10,12 @@ const Footer = () => {
             <div className="w-6 h-6 rounded-md bg-gradient-to-br from-primary to-accent flex items-center justify-center">
               <Sparkles className="w-3 h-3 text-primary-foreground" />
             </div>
-            <span className="text-sm font-medium text-foreground">MockPrep</span>
+            <span className="text-sm font-medium text-foreground">Vocal Coach AI</span>
           </div>
 
           {/* Copyright */}
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} MockPrep. Built to help you succeed.
+            © {new Date().getFullYear()} Vocal Coach AI. Built to help you succeed.
           </p>
         </div>
       </div>

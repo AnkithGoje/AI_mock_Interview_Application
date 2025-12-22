@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, XCircle, Download, RotateCcw, LineChart, Brain, Code2, Calendar, User, Briefcase, Hash } from "lucide-react";
+import { CheckCircle2, XCircle, Download, RotateCcw, LineChart, Brain, Code2, Calendar, User, Briefcase, Hash, Home } from "lucide-react";
 
 export default function ReportPage() {
     const location = useLocation();
@@ -215,6 +215,14 @@ export default function ReportPage() {
 
                 {/* --- FOOTER BUTTONS --- */}
                 <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4 pb-12">
+                    <Button
+                        size="lg"
+                        variant="outline"
+                        onClick={() => navigate("/")}
+                        className="bg-white hover:bg-gray-50 text-gray-700 shadow-sm rounded-lg px-8 font-semibold gap-2 border border-gray-200"
+                    >
+                        <Home className="w-4 h-4" /> Home
+                    </Button>
                     <Button
                         size="lg"
                         onClick={() => navigate("/")}

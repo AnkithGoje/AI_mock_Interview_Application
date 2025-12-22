@@ -14,7 +14,7 @@ const Navbar = () => {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold text-foreground">MockPrep</span>
+            <span className="text-lg font-semibold text-foreground">Vocal Coach AI</span>
           </div>
 
           {/* CTA Removed */}

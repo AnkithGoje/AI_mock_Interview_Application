@@ -1,6 +1,12 @@
 # Core LiveKit dependencies
 livekit-agents[deepgram,groq,cartesia,silero,turn-detector]~=1.0
 livekit-plugins-noise-cancellation~=0.2
+livekit-api>=0.6.0
+
+# Server dependencies
+flask>=3.0.0
+flask-cors>=4.0.0
+gunicorn>=21.2.0
 
 # Environment and utilities
 python-dotenv>=1.0.0

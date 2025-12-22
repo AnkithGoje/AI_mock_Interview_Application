@@ -55,5 +55,6 @@ def get_token():
     return jsonify({"token": token.to_jwt()})
 
 if __name__ == '__main__':
-    print("Starting Token Server on port 5000...")
-    app.run(port=5000, debug=True)
+    port = int(os.getenv('PORT', 5000))
+    print(f"Starting Token Server on port {port}...")
+    app.run(host='0.0.0.0', port=port, debug=True)
