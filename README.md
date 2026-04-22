@@ -1,10 +1,5 @@
 # AI Mock Interview Application 🎙️
 
-![Status](https://img.shields.io/badge/Status-Active_Development-brightgreen)
-![Tech](https://img.shields.io/badge/Tech-LiveKit_WebRTC-blue)
-![AI](https://img.shields.io/badge/AI-Llama_3_70B-purple)
-![License](https://img.shields.io/badge/License-MIT-gray)
-
 > **Master your technical interviews with a real-time, voice-interactive AI coach.**
 
 **Voice Coach AI** is an advanced mock interview platform that simulates real-world interview scenarios. It uses ultra-low latency WebRTC streaming to provide a seamless voice conversation experience, paired with a powerful "Shadow Grader" analysis engine that evaluates your performance in real-time.
