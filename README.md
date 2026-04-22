@@ -1,4 +1,4 @@
-# Voice Coach AI 🎙️
+# AI Mock Interview Application 🎙️
 
 ![Status](https://img.shields.io/badge/Status-Active_Development-brightgreen)
 ![Tech](https://img.shields.io/badge/Tech-LiveKit_WebRTC-blue)
